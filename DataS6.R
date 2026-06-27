@@ -1,5 +1,5 @@
 #Supplementary Code for
-#Fear of the Human “Super Predator” Restricts Elephant Ecosystem Engineering and Crop Damage      
+#Fear of the Human “Super Predator” Restricts Elephant Ecosystem Engineering and Crop Damage
 #Authors: Michael B. Kowalski, Anderson Larpei, Michael Clinchy, Justin Suraci, Liana Y. Zanette, Christopher C. Wilmers
 #Corresponding author: mbkowals@ucsc.edu
 
@@ -7,7 +7,7 @@
 #Libraries
 ##########
 library(tidyverse); library(activity); library(R2jags); library(abind);
-library(glmmTMB); library(emmeans); library(patchwork); library(DHARMa); 
+library(glmmTMB); library(emmeans); library(patchwork); library(DHARMa);
 library(performance); library(see)
 
 ##########
@@ -18,7 +18,7 @@ trees <- read.csv("DataS1.csv")
 conflict <- read.csv("DataS3.csv", colClasses = c(Date = "character"))
 farm.effort <- read.csv("DataS4.csv")
 anthro <- read.csv("DataS5.csv")
-load(file = "DataS7.rda", verbose = T) 
+load(file = "DataS7.rda", verbose = T)
 load("DataS8.rda")
 set.seed(1)
 
@@ -48,31 +48,31 @@ cat("model{
     # Prior for gamma distribution (rho)
     theta <- exp(logtheta)
     logtheta ~ dunif(-5,5)
-    
+
     ############
     # Spatial Parameters for Gaussian Process
     # Range parameters
-    rho.psi ~ dunif(0.1, 3)     
-    rho.lambda ~ dunif(0.1, 3)  
-            
+    rho.psi ~ dunif(0.1, 3)
+    rho.lambda ~ dunif(0.1, 3)
+
     # Marginal variance parameters
-    sigma2.psi ~ dunif(0.01, 3)     
-    sigma2.lambda ~ dunif(0.01, 3)  
-    
+    sigma2.psi ~ dunif(0.01, 3)
+    sigma2.lambda ~ dunif(0.01, 3)
+
     ############
     # Priors for probability of occurrence parameters (psi)
     a0 ~ dnorm(0, 0.001)      #intercept
     a1 ~ dnorm(0, 0.001)      #site effect
     a2 ~ dnorm(0, 0.001)      #treatment effect
     a3 ~ dnorm(0, 0.001)      #site x treatment interaction
-    
+
     ############
     # Priors for intensity of site use parameters (lambda)
     b0 ~ dnorm(0, 0.001)      #intercept
     b1 ~ dnorm(0, 0.001)      #site effect
     b2 ~ dnorm(0, 0.001)      #treatment effect
     b3 ~ dnorm(0, 0.001)      #site x treatment interaction
-    
+
     ############
     # Covariance matrices for spatial effects
     for(j in 1:M){
@@ -87,90 +87,90 @@ cat("model{
     }
     Omega.psi[1:M,1:M] <- inverse(Sigma.psi[,])
     Omega.lambda[1:M,1:M] <- inverse(Sigma.lambda[,])
-    
+
     ############
     # Spatial random effects
     phi.psi[1:M] ~ dmnorm(zeros[], Omega.psi[,])
     phi.lambda[1:M] ~ dmnorm(zeros[], Omega.lambda[,])
-    
+
     # Vector of zeros for MVN mean
     for(i in 1:M){
         zeros[i] <- 0
     }
-    
+
     ############
     # Couples each k survey period to the appropriate treatment period
-    t.track<-c(1,1,1,1,1,2,2,2,2,2)  
-    
+    t.track<-c(1,1,1,1,1,2,2,2,2,2)
+
     ############
     # Logistic regression submodel for probability of occurence (psi)
-    for(j in 1:M){                #loop through camera traps (1 to 24)         
+    for(j in 1:M){                #loop through camera traps (1 to 24)
         for(t in 1:2){            #loop through treatment periods (1 to 2)
             z[j,t] ~ dbern(psi[j,t])
-            
-            logit(psi[j,t]) <- b0 + b1*Trt[j,t] + b2*S.psi[j,t] + 
+
+            logit(psi[j,t]) <- b0 + b1*Trt[j,t] + b2*S.psi[j,t] +
             b3*Trt[j,t]*S.psi[j,t] + phi.psi[j]
-                
-            loglik.psi[j,t] <- z[j,t] * log(psi[j,t] + 1.0E-10) + 
+
+            loglik.psi[j,t] <- z[j,t] * log(psi[j,t] + 1.0E-10) +
                                (1 - z[j,t]) * log(1 - psi[j,t] + 1.0E-10)
         }
     }
-    
+
     ############
     # Negative binomial submodel for intensity of site use (lambda)
     for(j in 1:M){                  #loop through camera traps (1 to 24)
         for(k in 1:K){              #loop through survey periods (1 to 10)
-            log(lambda[j,k]) <- a0 + a1*Trt[j,k] + a2*S[j,k] + 
+            log(lambda[j,k]) <- a0 + a1*Trt[j,k] + a2*S[j,k] +
             a3*Trt[j,k]*S[j,k] + phi.lambda[j]
-            
+
             rho[j,k] ~ dgamma(theta, theta)
-            
+
             mu[j,k] <- rho[j,k]*lambda[j,k]
-            
+
             y[j,k] ~ dpois(z[j,t.track[k]] * mu[j,k])
-            
-            loglik.lambda[j,k] <- logdensity.pois(y[j,k], 
+
+            loglik.lambda[j,k] <- logdensity.pois(y[j,k],
             z[j,t.track[k]] * mu[j,k])
-    
+
             # Create new data for calculating Bayesian p-values
             y_new[j,k] ~ dpois(z[j,t.track[k]] * mu[j,k])
-            
+
             # Calculate statistics for Bayesian p-values
             eval[j,k] <- z[j,t.track[k]] * mu[j,k]
-            
+
             # Freeman-Tukey Residual
             Terr[j,k] <- pow(pow(y[j,k],.5) - pow(eval[j,k],.5),2)
             Terrnew[j,k] <- pow(pow(y_new[j,k],.5) - pow(eval[j,k],.5),2)
-            
+
             # Chi-squared stat
             ch.err[j,k] <- pow((y[j,k] - eval[j,k]),2)/ (eval[j,k] + 0.5)
-            ch.errnew[j,k] <- pow((y_new[j,k] - eval[j,k]),2)/ (eval[j,k]         
+            ch.errnew[j,k] <- pow((y_new[j,k] - eval[j,k]),2)/ (eval[j,k]
             + 0.5)
         }
     }
-    
+
     # Posterior predictive checks
     Tobs <- sum(Terr[,])
     Tnew <- sum(Terrnew[,])
     Chisq.obs <- sum(ch.err[,])
     Chisq.new <- sum(ch.errnew[,])
-           
+
     ############
     # Derived parameters
-    
+
     # Sum within experimental sites for both treatments
     for(t in 1:2){
         z.sum.S2[t] <- sum(z[1:12,t])
         z.sum.N2[t] <- sum(z[13:24,t])
     }
-    
+
     # Calculate average across sites for each treatment
     z.sum.C <- mean(c(z.sum.S2[2], z.sum.N2[1]))
     z.sum.H <- mean(c(z.sum.S2[1], z.sum.N2[2]))
-    
+
     # Get average value of rho
     rho.ave <- mean(rho[,])
-    
+
     # Estimate mean detection rate (lambda)
     det.N2.c <- mean(lambda[13:24,1:5])
     det.N2.h <- mean(lambda[13:24,6:10])
@@ -180,7 +180,7 @@ cat("model{
     # Calculate average across sites for each treatment
     det.C <- mean(c(det.N2.c, det.S2.c))
     det.H <- mean(c(det.N2.h, det.S2.h))
-    
+
     # Derived parameters for spatial correlation assessment
     eff.range.psi <- rho.psi * sqrt(-2 * log(0.05))
     eff.range.lambda <- rho.lambda * sqrt(-2 * log(0.05))
@@ -321,7 +321,7 @@ ele_dw <- detections %>% mutate(
   count(grid, treatment, camera, week, name = "det_week") %>%
   complete(grid, treatment, camera, week, fill = list(det_week = 0))
 
-# Elephant-damaged tree counts per transect 
+# Elephant-damaged tree counts per transect
 trees_tr <- trees %>% mutate(
     grid      = factor(grid),
     treatment = factor(treatment, levels = c("control", "human")),
@@ -351,31 +351,31 @@ boot_D <- function(eps = 0.5) {
     distinct(grid, camera) %>%
     group_by(grid) %>%
     reframe(camera = sample(camera, size = n(), replace = TRUE))
-  
+
   det_sum <- ele_dw %>%
     inner_join(
       cams_b %>% count(grid, camera, name = "w"),
       by = c("grid", "camera")) %>%
     group_by(grid, treatment) %>%
     summarise(N = sum(det_week * w), .groups = "drop")
-  
+
   # Resample transects within each grid
   trs_b <- trees_tr %>%
     distinct(grid, transect) %>%
     group_by(grid) %>%
     reframe(transect = sample(transect, size = n(), replace = TRUE))
-  
+
   tree_sum <- trees_tr %>%
     inner_join(
       trs_b %>% count(grid, transect, name = "w"),
       by = c("grid", "transect")) %>%
     group_by(grid, treatment) %>%
     summarise(D = sum(n_tree * w), .groups = "drop")
-  
+
   dat <- full_join(det_sum, tree_sum, by = c("grid", "treatment")) %>%
     mutate(N = N + eps, D = D + eps) %>%
     pivot_wider(names_from = treatment, values_from = c(N, D))
-  
+
   D_grid <- with(dat, log(D_human / D_control) - log(N_human / N_control))
   mean(D_grid, na.rm = TRUE)
 }
@@ -384,8 +384,8 @@ D_boot <- replicate(10000, boot_D())
 
 #Bootstrap Outputs
 D_hat <- compute_D(); D_hat
-quantile(D_boot, c(0.025, 0.975)) 
-mean(D_boot >= 0)                  
+quantile(D_boot, c(0.025, 0.975))
+mean(D_boot >= 0)
 
 #############
 #Abatement
@@ -473,7 +473,7 @@ eledamrate <- glmmTMB(
 
 summary(eledamrate)
 emm_eledam <- emmeans(eledamrate, ~ Treatment, type = "response", offset = log(30))
-emm_eledam 
+emm_eledam
 
 #############
 #Abatement
@@ -529,6 +529,9 @@ text_block <- function(label) {
     theme_void()
 }
 
+fill_vals <- c("Control" = "#2C7BB6", "Human" = "#D7191C")
+lvls      <- c("Control", "Human")
+
 damage_f      <- tibble(xlab = factor(lvls, lvls),
                         mean = c(26.80,  5.41),        lo = c(16.24,  3.09),        hi = c(44.24,   9.46))
 ele_cropdam   <- tibble(xlab = factor(lvls, lvls),
@@ -547,14 +550,13 @@ eleprox_emm   <- tibble(xlab = factor(lvls, lvls),
                         mean = c(8.2,   78.2),          lo = c(5.73,  49.81),         hi = c(11.7,  122.6))
 
 ############################ Manuscript Figures ###############################
-fill_vals <- c("Control" = "#2C7BB6", "Human" = "#D7191C")
-lvls      <- c("Control", "Human")
-
 #Figure 1
 F1A <- make_plot(damage_f,      "Trees damaged\nper transect on grids")
-F1B <- make_plot(ele_cropdam,   "Monthly crop damage\nper farm (m²)")
+F1B <- make_plot(ele_cropdam,   "Crop damage\nper farm (m²)")
 F1C <- make_plot(det_grid,      "Elephant detections\nper week on grids",  show_x = TRUE)
-F1D <- make_plot(eledetect_emm, "Elephant detections\nper month on farms", show_x = TRUE)
+F1D <- make_plot(eledetect_emm, "Elephant detections\nper month on farms", show_x = TRUE) +
+  scale_y_continuous(breaks = c(0, 2, 4, 6, 8, 10), limits = c(0, 11),
+                     expand = expansion(mult = c(0, 0.05)))
 
 F1 <- (text_block("Reserve") | text_block("Farms")) /
       (F1A | F1B) /
@@ -565,7 +567,9 @@ F1
 
 #Figure 2
 F2A <- make_plot(damage_d,     "Damage per tree\non grids (percent)",              show_x = TRUE)
-F2B <- make_plot(ele_conv_emm, "Crop raided if elephant\non farm (% probability)", show_x = TRUE)
+F2B <- make_plot(ele_conv_emm, "Crop raided if elephant\non farm (% probability)", show_x = TRUE)+
+  scale_y_continuous(breaks = c(0, 15, 30, 45, 60), limits = c(0, 75),
+                     expand = expansion(mult = c(0, 0.05)))
 
 F2 <- (text_block("Reserve") | text_block("Farms")) /
   (F2A | F2B) /
