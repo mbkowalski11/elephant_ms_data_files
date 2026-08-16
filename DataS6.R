@@ -539,7 +539,7 @@ ele_cropdam   <- tibble(xlab = factor(lvls, lvls),
 det_grid      <- tibble(xlab = factor(lvls, lvls),
                         mean = c(1.431, 0.664) * 12,   lo = c(1.110, 0.486) * 12,   hi = c(1.808, 0.898) * 12)
 eledetect_emm <- tibble(xlab = factor(lvls, lvls),
-                        mean = c(7.29,   1.79),         lo = c(5.19,   1.12),         hi = c(10.24,   2.86))
+                        mean = c(9.07,   2.88),         lo = c(7.13,   2.14),         hi = c(11.53,   3.89))
 damage_d      <- tibble(xlab = factor(lvls, lvls),
                         mean = c(19.97,  6.96),         lo = c(15.54,  5.02),         hi = c(25.65,   9.64))
 ele_conv_emm  <- tibble(xlab = factor(lvls, lvls),
@@ -555,7 +555,7 @@ F1A <- make_plot(damage_f,      "Trees damaged\nper transect on grids")
 F1B <- make_plot(ele_cropdam,   "Crop damage\nper farm (m²)")
 F1C <- make_plot(det_grid,      "Elephant detections\nper week on grids",  show_x = TRUE)
 F1D <- make_plot(eledetect_emm, "Elephant detections\nper month on farms", show_x = TRUE) +
-  scale_y_continuous(breaks = c(0, 2, 4, 6, 8, 10), limits = c(0, 11),
+  scale_y_continuous(breaks = c(0, 2, 4, 6, 8, 10, 12), limits = c(0, 12),
                      expand = expansion(mult = c(0, 0.05)))
 
 F1 <- (text_block("Reserve") | text_block("Farms")) /
